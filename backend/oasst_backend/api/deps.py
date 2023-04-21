@@ -27,10 +27,7 @@ async def get_api_key(
     api_key_query: str = Security(api_key_query),
     api_key_header: str = Security(api_key_header),
 ):
-    if api_key_query:
-        return api_key_query
-    else:
-        return api_key_header
+    return api_key_query if api_key_query else api_key_header
 
 
 def get_dummy_api_client(db: Session) -> ApiClient:

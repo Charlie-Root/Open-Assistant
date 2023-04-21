@@ -47,15 +47,13 @@ def analytic_solution(a_post, a_prior):
     """
     post_sum = np.sum(a_post)
     prior_sum = np.sum(a_prior)
-    info = (
+    return (
         gammaln(post_sum)
         - gammaln(prior_sum)
         - np.sum(gammaln(a_post))
         + np.sum(gammaln(a_prior))
         - np.sum((a_post - a_prior) * (psi(a_post) - psi(post_sum)))
     )
-
-    return info
 
 
 def infogain(a_post, a_prior):
@@ -67,12 +65,6 @@ def infogain(a_post, a_prior):
     Maybe remove
     """
     )
-    args = len(a_prior)
-    p = dirichlet(a_post).pdf
-    q = dirichlet(a_prior).pdf
-    (info, _) = nquad(relative_entropy(p, q), [make_range for _ in range(args - 1)], opts={"epsabs": 1e-8})
-    # info = naive_monte_carlo_integral(relative_entropy(p,q), len(a_post))
-    return info
 
 
 def uniform_expected_infogain(a_prior):

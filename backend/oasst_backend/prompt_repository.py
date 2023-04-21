@@ -111,12 +111,14 @@ class PromptRepository:
 
     def fetch_workpackage_by_postid(self, post_id: str) -> WorkPackage:
         self.validate_post_id(post_id)
-        work_pack = (
+        return (
             self.db.query(WorkPackage)
-            .filter(WorkPackage.api_client_id == self.api_client.id, WorkPackage.frontend_ref_post_id == post_id)
+            .filter(
+                WorkPackage.api_client_id == self.api_client.id,
+                WorkPackage.frontend_ref_post_id == post_id,
+            )
             .one_or_none()
         )
-        return work_pack
 
     def store_text_reply(self, text: str, post_id: str, user_post_id: str, role: str = None) -> Post:
         self.validate_post_id(post_id)
@@ -143,11 +145,7 @@ class PromptRepository:
             self.db.add(parent_post)
 
             depth = parent_post.depth + 1
-            if parent_post.role == "assistant":
-                role = "user"
-            else:
-                role = "assistant"
-
+            role = "user" if parent_post.role == "assistant" else "assistant"
         # create reply post
         new_post_id = uuid4()
         user_post = self.insert_post(
@@ -337,11 +335,7 @@ class PromptRepository:
         depth: int = 0,
     ) -> Post:
         if payload_type is None:
-            if payload is None:
-                payload_type = "null"
-            else:
-                payload_type = type(payload).__name__
-
+            payload_type = "null" if payload is None else type(payload).__name__
         post = Post(
             id=post_id,
             parent_id=parent_id,
@@ -404,8 +398,7 @@ class PromptRepository:
         distinct_threads = distinct_threads.subquery()
 
         random_thread = self.db.query(distinct_threads).order_by(func.random()).limit(1)
-        thread_posts = self.db.query(Post).filter(Post.thread_id.in_(random_thread)).all()
-        return thread_posts
+        return self.db.query(Post).filter(Post.thread_id.in_(random_thread)).all()
 
     def fetch_random_conversation(self, last_post_role: str = None) -> list[Post]:
         """
@@ -427,19 +420,20 @@ class PromptRepository:
             conv_posts = [random.choice(thread_posts)]
         thread_posts = {p.id: p for p in thread_posts}
 
-        while True:
-            if not conv_posts[-1].parent_id:
-                # reached the start of the conversation
-                break
-
+        while conv_posts[-1].parent_id:
             parent_post = thread_posts[conv_posts[-1].parent_id]
             conv_posts.append(parent_post)
 
         return list(reversed(conv_posts))
 
     def fetch_random_initial_prompts(self, size: int = 5):
-        posts = self.db.query(Post).filter(Post.parent_id.is_(None)).order_by(func.random()).limit(size).all()
-        return posts
+        return (
+            self.db.query(Post)
+            .filter(Post.parent_id.is_(None))
+            .order_by(func.random())
+            .limit(size)
+            .all()
+        )
 
     def fetch_thread(self, thread_id: UUID):
         return self.db.query(Post).filter(Post.thread_id == thread_id).all()
@@ -457,11 +451,7 @@ class PromptRepository:
         thread = self.fetch_thread(replies[0].thread_id)
         thread = {p.id: p for p in thread}
         thread_posts = [thread[replies[0].parent_id]]
-        while True:
-            if not thread_posts[-1].parent_id:
-                # reached start of the conversation
-                break
-
+        while thread_posts[-1].parent_id:
             parent_post = thread[thread_posts[-1].parent_id]
             thread_posts.append(parent_post)
 

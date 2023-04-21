@@ -164,14 +164,13 @@ class OpenAssistantBot(BotBase):
         while True:
             now = utcnow()
 
-            if self.bot_channel:
-                if now > next_fetch_task:
-                    next_fetch_task = utcnow() + timedelta(seconds=60)
+            if self.bot_channel and now > next_fetch_task:
+                next_fetch_task = utcnow() + timedelta(seconds=60)
 
-                    try:
-                        await self.next_task()
-                    except Exception:
-                        logger.exception("fetching next task failed")
+                try:
+                    await self.next_task()
+                except Exception:
+                    logger.exception("fetching next task failed")
 
             for x in self.reply_handlers.values():
                 x.handler.tick(now)
@@ -215,16 +214,16 @@ class OpenAssistantBot(BotBase):
     def recipient_filter(self, message: discord.Message) -> bool:
         channel = message.channel
 
-        if (
-            message.channel.type == discord.ChannelType.private
-            or message.channel.type == discord.ChannelType.private_thread
-        ):
+        if message.channel.type in [
+            discord.ChannelType.private,
+            discord.ChannelType.private_thread,
+        ]:
             return True
 
-        if (
-            message.channel.type == discord.ChannelType.text
-            or message.channel.type == discord.ChannelType.public_thread
-        ):
+        if message.channel.type in [
+            discord.ChannelType.text,
+            discord.ChannelType.public_thread,
+        ]:
             while channel:
                 if self.bot_channel and channel.id == self.bot_channel.id:
                     return True
@@ -260,7 +259,7 @@ class OpenAssistantBot(BotBase):
 
     async def remove_completed_handlers(self):
         completed = [k for k, v in self.reply_handlers.items() if v.handler is None or v.handler.completed]
-        if len(completed) == 0:
+        if not completed:
             return
 
         for c in completed:
